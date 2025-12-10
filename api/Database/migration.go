@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS users (
 const createItemsTable = `
 CREATE TABLE IF NOT EXISTS items (
 	id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	user_id UUID NOT NULL,
 	name VARCHAR(255) NOT NULL,
 	description TEXT,
 	price DECIMAL(10, 2) NOT NULL,
@@ -43,7 +44,8 @@ CREATE TABLE IF NOT EXISTS items (
 	quantity INTEGER DEFAULT 0,
 	is_sold BOOLEAN DEFAULT FALSE,
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );`
 const createItemsUserIndex = `
 CREATE INDEX IF NOT EXISTS idx_items_user_id ON items(user_id);`
