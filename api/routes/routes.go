@@ -2,7 +2,7 @@ package routes
 import(
 	"net/http"
 "primeauction/api/handler"
-"fmt"
+
 )
 type Route struct {
 	Path string
@@ -10,7 +10,7 @@ type Route struct {
 	Handler func(w http.ResponseWriter, r *http.Request)
 }
 
-func setupRoutes(itemHandler *handler.ItemHandler,userHandler *UserHandler) [] Route{
+func setupRoutes(itemHandler *handler.ItemHandler,userHandler *handler.UserHandler) [] Route{
 	return [] Route{
 		{Path: "/items", Method: "GET", Handler: itemHandler.GetAllItems},
 		{Path: "/items", Method: "POST", Handler: itemHandler.CreateItem},
@@ -18,7 +18,7 @@ func setupRoutes(itemHandler *handler.ItemHandler,userHandler *UserHandler) [] R
 		{Path: "/items/{id}", Method: "PUT", Handler: itemHandler.UpdateItem},
 		{Path: "/items/{id}", Method: "DELETE", Handler: itemHandler.DeleteItem},
 		{Path: "/users", Method: "GET", Handler: userHandler.GetUsers},
-		{Path: "/users", Method: "POST", Handler: userHandler.CreateUser},
+		{Path: "/users", Method: "POST", Handler: userHandler.C},
 		{Path: "/users/{id}", Method: "GET", Handler: userHandler.GetUserById},
 		{Path: "/users/{id}", Method: "PUT", Handler: userHandler.UpdateUser},
 		{Path: "/users/{id}", Method: "DELETE", Handler: userHandler.DeleteUser},
