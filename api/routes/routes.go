@@ -12,7 +12,7 @@ type Route struct {
 
 func setupRoutes(itemHandler *handler.ItemHandler,userHandler *UserHandler) [] Route{
 	return [] Route{
-		{Path: "/items", Method: "GET", Handler: itemHandler.GetItems},
+		{Path: "/items", Method: "GET", Handler: itemHandler.GetAllItems},
 		{Path: "/items", Method: "POST", Handler: itemHandler.CreateItem},
 		{Path: "/items/{id}", Method: "GET", Handler: itemHandler.GetItemById},
 		{Path: "/items/{id}", Method: "PUT", Handler: itemHandler.UpdateItem},
