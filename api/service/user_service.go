@@ -54,3 +54,38 @@ func (s *UserService) LoginUser(email, password string) (*models.User, error) {
 	user.Password = ""
 	return user, nil
 }
+func (s *UserService) GetUserById(id string)(*models.User,error){
+	user,err:=s.userRepo.GetUserByID(id)
+	if err!=nil{
+		return nil,err
+	}
+	return user,nil
+}
+func (s *UserService) UpdateUser(id string,user *models.User) error {
+	if user.Username == "" {
+		return errors.New("name is required")
+	}
+	if user.Email == "" {
+		return errors.New("email is required")
+	}
+	if user.Password == "" {
+		return errors.New("password is required")
+
+	}
+	hashpassword,err :=bcrypt.GenerateFromPassword([]byte(user.Password),bcrypt.DefaultCost)
+	if err!=nil{
+		return  errors.New("failed to hash password")
+	}
+	user.Password=string(hashpassword)
+	if err:=s.userRepo.UpdateUser(id,user);err!=nil{
+		return err
+	}
+	return nil
+
+}
+func (s *UserService)DeleteUser(id string) error{
+	if err:=s.userRepo.DeleteUser(id);err!=nil{
+		return err
+	}
+	return  nil
+}

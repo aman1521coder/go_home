@@ -1,22 +1,40 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
+
+	database "primeauction/api/Database"
+	repository "primeauction/api/Repository"
+	"primeauction/api/handler"
+	"primeauction/api/routes"
+	"primeauction/api/service"
 )
 
 func main() {
-	http.HandleFunc("/", homeHandler)
-	http.HandleFunc("/health", healthHandler)
-	fmt.Println("Server is running on port 8080")
-	log.Fatal(http.ListenAndServe(":8080", nil)) // lisen and serve on port 8080
+	// Initialize database
+	if err := database.InitDB(); err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer database.CloseDB()
 
-}
-func homeHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hello World")
-}
-func healthHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "OK")
+	// Initialize repositories
+	itemRepo := repository.NewItemRepository(database.DB)
+	userRepo := repository.NewUserRepository(database.DB)
+
+	// Initialize services
+	itemService := service.NewItemService(itemRepo)
+	userService := service.NewUserService(userRepo)
+
+	// Initialize handlers
+	itemHandler := handler.NewItemHandler(itemService)
+	userHandler := handler.NewUserHandler(userService)
+
+	// Setup and register routes
+	routesList := routes.SetupRoutes(itemHandler, userHandler)
+	routes.RegisterRoutes(&routesList)
+
+	// Start server
+	log.Println("Server is running on port 8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }

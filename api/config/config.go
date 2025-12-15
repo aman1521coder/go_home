@@ -41,6 +41,7 @@ func GetEnv(key, defaultValue string) string {
 	}
 	return defaultValue
 }
+
 func GetJWTSecret()string{
 	return GetEnv("JWT_SECRET","your-secret-key")
 }
