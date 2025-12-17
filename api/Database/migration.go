@@ -11,6 +11,7 @@ func RunMigration(db *sql.DB) {
 		createUsersTable,
 		createItemsTable,
 		createItemsUserIndex,
+		createItemImagesTable,
 	}
 	for _, migration := range migrations {
 		_, err := db.Exec(migration)
@@ -49,3 +50,16 @@ CREATE TABLE IF NOT EXISTS items (
 );`
 const createItemsUserIndex = `
 CREATE INDEX IF NOT EXISTS idx_items_user_id ON items(user_id);`
+
+const createItemImagesTable = `
+CREATE TABLE IF NOT EXISTS item_images (
+	id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	item_id UUID NOT NULL,
+	image_path VARCHAR(500) NOT NULL,
+	display_order INTEGER DEFAULT 0,
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT fk_item FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_item_images_item_id ON item_images(item_id);
+`

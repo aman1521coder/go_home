@@ -13,6 +13,11 @@ type ItemRepository struct {
 func NewItemRepository(db *sql.DB) *ItemRepository {
 	return &ItemRepository{db: db}
 }
+
+// GetDB returns the database connection (for creating other repositories)
+func (r *ItemRepository) GetDB() *sql.DB {
+	return r.db
+}
 func (r *ItemRepository) CreateItem(item *models.Item) error {
 	query := `INSERT INTO items (user_id, name, description, price, selling_price, image, quantity, is_sold)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -50,6 +55,18 @@ func (r *ItemRepository) GetItemById(id string) (*models.Item, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Load images for this item
+	imageRepo := NewItemImageRepository(r.db)
+	images, err := imageRepo.GetImagesByItemID(item.Id)
+	if err == nil {
+		item.Images = images
+		// Set primary image if not set and we have images
+		if item.Image == "" && len(images) > 0 {
+			item.Image = images[0].ImagePath
+		}
+	}
+
 	return item, nil
 }
 func (r *ItemRepository) UpdateItem(item *models.Item) error {
@@ -143,6 +160,8 @@ func (r *ItemRepository) GetItemsByUserID(userID string) ([]*models.Item, error)
 	defer rows.Close()
 
 	var items []*models.Item
+	imageRepo := NewItemImageRepository(r.db)
+
 	for rows.Next() {
 		item := &models.Item{}
 		err := rows.Scan(
@@ -161,6 +180,17 @@ func (r *ItemRepository) GetItemsByUserID(userID string) ([]*models.Item, error)
 		if err != nil {
 			return nil, err
 		}
+
+		// Load images for each item
+		images, err := imageRepo.GetImagesByItemID(item.Id)
+		if err == nil {
+			item.Images = images
+			// Set primary image if not set and we have images
+			if item.Image == "" && len(images) > 0 {
+				item.Image = images[0].ImagePath
+			}
+		}
+
 		items = append(items, item)
 	}
 	return items, nil

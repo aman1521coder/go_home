@@ -6,7 +6,7 @@ import (
 	"primeauction/api/models"
 
 	"golang.org/x/crypto/bcrypt"
-)
+	)
 
 type UserService struct {
 	userRepo *repository.UserRepository
@@ -42,6 +42,8 @@ func (s *UserService) CreateUser(user *models.User) error {
 		return err
 	}
 	return nil
+
+	
 }
 func (s *UserService) LoginUser(email, password string) (*models.User, error) {
 	user, err := s.userRepo.GetUserByEmail(email)

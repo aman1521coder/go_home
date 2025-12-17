@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"primeauction/api/handler"
 	"primeauction/api/middleware"
+	"fmt"
 )
 
 type Route struct {
@@ -32,15 +33,31 @@ func SetupRoutes(itemHandler *handler.ItemHandler, userHandler *handler.UserHand
 		{Path: "/api/users/{id}", Method: "DELETE", Handler: middleware.AuthMiddleware(userHandler.DeleteUser)},
 	}
 }
+
 func RegisterRoutes(routes *[]Route) {
+	// Group routes by path to handle method routing
+	pathHandlers := make(map[string]map[string]http.HandlerFunc)
+	
 	for _, route := range *routes {
-		r := route
-		http.HandleFunc(r.Path, func(w http.ResponseWriter, req *http.Request) {
-			if req.Method == r.Method {
-				r.Handler(w, req)
-			} else {
+		if pathHandlers[route.Path] == nil {
+			pathHandlers[route.Path] = make(map[string]http.HandlerFunc)
+		}
+		pathHandlers[route.Path][route.Method] = route.Handler
+		fmt.Println(pathHandlers)
+	}
+
+	// Register each unique path with a method router
+	for path, methods := range pathHandlers {
+		path := path // Capture for closure
+		methods := methods // Capture for closure
+		
+		http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+			handler, exists := methods[r.Method]
+			if !exists {
 				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
 			}
+			handler(w, r)
 		})
 	}
 }

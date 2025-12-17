@@ -30,6 +30,10 @@ func main() {
 	itemHandler := handler.NewItemHandler(itemService)
 	userHandler := handler.NewUserHandler(userService)
 
+	// Serve static files (uploaded images)
+	fs := http.FileServer(http.Dir("./uploads"))
+	http.Handle("/uploads/", http.StripPrefix("/uploads/", fs))
+
 	// Setup and register routes
 	routesList := routes.SetupRoutes(itemHandler, userHandler)
 	routes.RegisterRoutes(&routesList)
