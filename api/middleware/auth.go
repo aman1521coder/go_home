@@ -32,3 +32,13 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		next(w, r)
 	}
 }
+func AdminMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		adminHeader := r.Header.Get("X-Is-Admin")
+		if adminHeader != "true" {
+			http.Error(w, "Forbidden: Admin access required", http.StatusForbidden)
+			return
+		}
+		next(w, r)
+	}
+}

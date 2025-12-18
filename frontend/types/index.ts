@@ -8,6 +8,14 @@ export interface User {
   is_admin: boolean;
 }
 
+export interface ItemImage {
+  id: string;
+  item_id: string;
+  image_path: string;
+  display_order: number;
+  created_at: string;
+}
+
 export interface Item {
   id: string;
   user_id: string;
@@ -16,6 +24,7 @@ export interface Item {
   price: number;
   selling_price: number;
   image: string;
+  images?: ItemImage[];
   quantity: number;
   created_at: string;
   updated_at: string;

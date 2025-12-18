@@ -4,18 +4,17 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { isAuthenticated } from '@/lib/auth';
-import { Item } from '@/types';
 
 export default function CreateItemPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState<Partial<Item>>({
+  const [formData, setFormData] = useState({
     name: '',
     description: '',
-    price: 0,
-    selling_price: 0,
-    image: '',
-    quantity: 1,
+    price: '',
+    selling_price: '',
+    quantity: '1',
   });
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -30,10 +29,32 @@ export default function CreateItemPage() {
     setLoading(true);
 
     try {
-      await api.post('/api/items', formData);
+      // Create FormData for multipart/form-data
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('price', formData.price);
+      formDataToSend.append('selling_price', formData.selling_price);
+      formDataToSend.append('quantity', formData.quantity);
+
+      // Append image files (note: "images" plural for multiple files)
+      imageFiles.forEach((file) => {
+        formDataToSend.append('images', file);
+      });
+
+      await api.post('/api/items', formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
       router.push('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data || 'Failed to create item');
+      if (err.response?.status === 403) {
+        setError('Access denied: Only administrators can create items. Please contact an admin to add items to the market.');
+      } else {
+        const errorMessage = err.response?.data || err.message || 'Failed to create item';
+        setError(typeof errorMessage === 'string' ? errorMessage : 'Failed to create item');
+      }
     } finally {
       setLoading(false);
     }
@@ -89,8 +110,8 @@ export default function CreateItemPage() {
               step="0.01"
               min="0"
               required
-              value={formData.price}
-              onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
+            value={formData.price}
+            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="0.00"
             />
@@ -106,8 +127,8 @@ export default function CreateItemPage() {
               step="0.01"
               min="0"
               required
-              value={formData.selling_price}
-              onChange={(e) => setFormData({ ...formData, selling_price: parseFloat(e.target.value) })}
+            value={formData.selling_price}
+            onChange={(e) => setFormData({ ...formData, selling_price: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="0.00"
             />
@@ -115,17 +136,55 @@ export default function CreateItemPage() {
         </div>
 
         <div>
-          <label htmlFor="image" className="block text-sm font-medium mb-1">
-            Image URL
+          <label htmlFor="images" className="block text-sm font-medium mb-1">
+            Item Images (Multiple)
           </label>
           <input
-            id="image"
-            type="url"
-            value={formData.image}
-            onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+            id="images"
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={(e) => {
+              const files = Array.from(e.target.files || []);
+              if (files.length > 10) {
+                setError('Maximum 10 images allowed');
+                return;
+              }
+              // Validate each file
+              for (const file of files) {
+                if (file.size > 5 * 1024 * 1024) {
+                  setError(`${file.name} exceeds 5MB limit`);
+                  return;
+                }
+              }
+              setImageFiles(files);
+              setError(''); // Clear error if validation passes
+            }}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="https://example.com/image.jpg"
           />
+          {imageFiles.length > 0 && (
+            <div className="mt-2 grid grid-cols-4 gap-2">
+              {imageFiles.map((file, index) => (
+                <div key={index} className="relative">
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt={`Preview ${index + 1}`}
+                    className="w-full h-20 object-cover rounded"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setImageFiles(imageFiles.filter((_, i) => i !== index))}
+                    className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center hover:bg-red-600"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="mt-1 text-xs text-gray-500">
+            You can upload up to 10 images. Maximum 5MB per image.
+          </p>
         </div>
 
         <div>
@@ -138,7 +197,7 @@ export default function CreateItemPage() {
             min="1"
             required
             value={formData.quantity}
-            onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) })}
+            onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="1"
           />

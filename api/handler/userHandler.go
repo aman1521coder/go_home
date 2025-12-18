@@ -37,7 +37,10 @@ func (h *UserHandler) GetAllUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(users)
 }
 func (h *UserHandler) GetUserById(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
+	id := r.PathValue("id")
+	if id == "" {
+		id = r.URL.Query().Get("id")
+	}
 	if id == "" {
 		http.Error(w, "ID is required", http.StatusBadRequest)
 		return
@@ -130,7 +133,10 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(user)
 }
 func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
+	id := r.PathValue("id")
+	if id == "" {
+		id = r.URL.Query().Get("id")
+	}
 	if id == "" {
 		http.Error(w, "ID is required", http.StatusBadRequest)
 		return
@@ -151,7 +157,10 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(user)
 }
 func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
+	id := r.PathValue("id")
+	if id == "" {
+		id = r.URL.Query().Get("id")
+	}
 	if id == "" {
 		http.Error(w, "ID is required", http.StatusBadRequest)
 		return

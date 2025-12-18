@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"primeauction/api/handler"
 	"primeauction/api/middleware"
-	"fmt"
 )
 
 type Route struct {
@@ -22,7 +21,9 @@ func SetupRoutes(itemHandler *handler.ItemHandler, userHandler *handler.UserHand
 		{Path: "/api/items/{id}", Method: "GET", Handler: itemHandler.GetItemById}, // Public: view single item
 
 		// Protected routes (require authentication)
-		{Path: "/api/items", Method: "POST", Handler: middleware.AuthMiddleware(itemHandler.CreateItem)},
+		// Admin-only: Create items
+		{Path: "/api/items", Method: "POST", Handler: middleware.AuthMiddleware(middleware.AdminMiddleware(itemHandler.CreateItem))},
+		// Authenticated users: Update and delete items
 		{Path: "/api/items/{id}", Method: "PUT", Handler: middleware.AuthMiddleware(itemHandler.UpdateItem)},
 		{Path: "/api/items/{id}", Method: "DELETE", Handler: middleware.AuthMiddleware(itemHandler.DeleteItem)},
 
@@ -37,27 +38,26 @@ func SetupRoutes(itemHandler *handler.ItemHandler, userHandler *handler.UserHand
 func RegisterRoutes(routes *[]Route) {
 	// Group routes by path to handle method routing
 	pathHandlers := make(map[string]map[string]http.HandlerFunc)
-	
+
 	for _, route := range *routes {
 		if pathHandlers[route.Path] == nil {
 			pathHandlers[route.Path] = make(map[string]http.HandlerFunc)
 		}
 		pathHandlers[route.Path][route.Method] = route.Handler
-		fmt.Println(pathHandlers)
 	}
 
 	// Register each unique path with a method router
 	for path, methods := range pathHandlers {
-		path := path // Capture for closure
+		path := path       // Capture for closure
 		methods := methods // Capture for closure
-		
-		http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+
+		http.HandleFunc(path, middleware.CORSMiddleware(func(w http.ResponseWriter, r *http.Request) {
 			handler, exists := methods[r.Method]
 			if !exists {
 				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 				return
 			}
 			handler(w, r)
-		})
+		}))
 	}
 }

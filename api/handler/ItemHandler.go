@@ -23,6 +23,11 @@ func (h *ItemHandler) GetAllItems(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	// Ensure we always return an array, even if nil
+	if items == nil {
+		items = []*models.Item{}
+	}
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(items)
 }
 func (h *ItemHandler) CreateItem(w http.ResponseWriter, r *http.Request) {
@@ -108,7 +113,10 @@ func (h *ItemHandler) CreateItem(w http.ResponseWriter, r *http.Request) {
 }
 func (h *ItemHandler) GetItemById(w http.ResponseWriter, r *http.Request) {
 
-	id := r.URL.Query().Get("id")
+	id := r.PathValue("id")
+	if id == "" {
+		id = r.URL.Query().Get("id") // Fallback for old style
+	}
 	if id == "" {
 		http.Error(w, "ID is required", http.StatusBadRequest)
 		return
@@ -123,7 +131,10 @@ func (h *ItemHandler) GetItemById(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(item)
 }
 func (h *ItemHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
+	id := r.PathValue("id")
+	if id == "" {
+		id = r.URL.Query().Get("id") // Fallback
+	}
 	if id == "" {
 		http.Error(w, "ID is required", http.StatusBadRequest)
 		return
@@ -149,35 +160,41 @@ func (h *ItemHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create item from form values
+	// Create item from form values with fallback to existing data
 	item := models.Item{
 		Id:          id,
-		Name:        r.FormValue("name"),
-		Description: r.FormValue("description"),
+		Name:        existingItem.Name,
+		Description: existingItem.Description,
 		Image:       existingItem.Image, // Keep existing image by default
 	}
 
-	// Parse other fields
+	if name := r.FormValue("name"); name != "" {
+		item.Name = name
+	}
+	if description := r.FormValue("description"); description != "" {
+		item.Description = description
+	}
+
+	// Parse other fields with fallback to existing values
+	item.Price = existingItem.Price
 	if priceStr := r.FormValue("price"); priceStr != "" {
 		if price, err := strconv.ParseFloat(priceStr, 64); err == nil {
 			item.Price = price
 		}
-	} else {
-		item.Price = existingItem.Price
 	}
+
+	item.SellingPrice = existingItem.SellingPrice
 	if sellingPriceStr := r.FormValue("selling_price"); sellingPriceStr != "" {
 		if sellingPrice, err := strconv.ParseFloat(sellingPriceStr, 64); err == nil {
 			item.SellingPrice = sellingPrice
 		}
-	} else {
-		item.SellingPrice = existingItem.SellingPrice
 	}
+
+	item.Quantity = existingItem.Quantity
 	if quantityStr := r.FormValue("quantity"); quantityStr != "" {
 		if quantity, err := strconv.Atoi(quantityStr); err == nil {
 			item.Quantity = quantity
 		}
-	} else {
-		item.Quantity = existingItem.Quantity
 	}
 
 	// Handle new image uploads
@@ -195,15 +212,7 @@ func (h *ItemHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Delete old images
-		for _, img := range existingItem.Images {
-			utils.DeleteImage(img.ImagePath)
-		}
-		if existingItem.Image != "" {
-			utils.DeleteImage(existingItem.Image)
-		}
-
-		// Save new images
+		// Save new images first
 		var err error
 		imagePaths, err = utils.SaveMultipleImages(fileHeaders, userID)
 		if err != nil {
@@ -219,6 +228,16 @@ func (h *ItemHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// SUCCESS: Now delete old images ONLY if new ones were successfully saved
+	if len(imagePaths) > 0 {
+		for _, img := range existingItem.Images {
+			utils.DeleteImage(img.ImagePath)
+		}
+		if existingItem.Image != "" {
+			utils.DeleteImage(existingItem.Image)
+		}
+	}
+
 	// Reload item to get updated images
 	updatedItem, err := h.ItemService.GetItemById(id)
 	if err != nil {
@@ -231,7 +250,10 @@ func (h *ItemHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(updatedItem)
 }
 func (h *ItemHandler) DeleteItem(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
+	id := r.PathValue("id")
+	if id == "" {
+		id = r.URL.Query().Get("id")
+	}
 	if id == "" {
 		http.Error(w, "Id is required", http.StatusBadRequest)
 		return

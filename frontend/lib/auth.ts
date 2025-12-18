@@ -39,4 +39,13 @@ export const isAuthenticated = (): boolean => {
   return getToken() !== null;
 };
 
+export const isAdmin = (): boolean => {
+  if (typeof window !== 'undefined') {
+    const user = getUser();
+    return user?.is_admin === true;
+  }
+  return false;
+};
+
+
 

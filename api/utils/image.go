@@ -151,3 +151,4 @@ func DeleteMultipleImages(imagePaths []string) error {
 	return nil
 }
 
+

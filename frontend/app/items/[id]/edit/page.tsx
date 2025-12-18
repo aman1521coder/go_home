@@ -9,14 +9,14 @@ import { Item } from '@/types';
 export default function EditItemPage() {
   const params = useParams();
   const router = useRouter();
-  const [formData, setFormData] = useState<Partial<Item>>({
+  const [formData, setFormData] = useState({
     name: '',
     description: '',
-    price: 0,
-    selling_price: 0,
-    image: '',
-    quantity: 1,
+    price: '',
+    selling_price: '',
+    quantity: '1',
   });
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -32,15 +32,14 @@ export default function EditItemPage() {
 
   const fetchItem = async () => {
     try {
-      const response = await api.get(`/api/items?id=${params.id}`);
+      const response = await api.get(`/api/items/${params.id}`);
       const item = response.data;
       setFormData({
         name: item.name,
         description: item.description,
-        price: item.price,
-        selling_price: item.selling_price,
-        image: item.image || '',
-        quantity: item.quantity,
+        price: item.price?.toString() || '0',
+        selling_price: item.selling_price?.toString() || '0',
+        quantity: item.quantity?.toString() || '1',
       });
     } catch (err: any) {
       setError('Failed to load item');
@@ -55,10 +54,30 @@ export default function EditItemPage() {
     setSaving(true);
 
     try {
-      await api.put(`/api/items?id=${params.id}`, formData);
+      // Create FormData for multipart/form-data
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('price', formData.price);
+      formDataToSend.append('selling_price', formData.selling_price);
+      formDataToSend.append('quantity', formData.quantity);
+
+      // Append image files if new ones are selected
+      if (imageFiles.length > 0) {
+        imageFiles.forEach((file) => {
+          formDataToSend.append('images', file);
+        });
+      }
+
+      await api.put(`/api/items/${params.id}`, formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
       router.push(`/items/${params.id}`);
     } catch (err: any) {
-      setError(err.response?.data || 'Failed to update item');
+      const errorMessage = err.response?.data || err.message || 'Failed to update item';
+      setError(typeof errorMessage === 'string' ? errorMessage : 'Failed to update item');
     } finally {
       setSaving(false);
     }
@@ -120,8 +139,8 @@ export default function EditItemPage() {
               step="0.01"
               min="0"
               required
-              value={formData.price}
-              onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
+            value={formData.price}
+            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -136,24 +155,63 @@ export default function EditItemPage() {
               step="0.01"
               min="0"
               required
-              value={formData.selling_price}
-              onChange={(e) => setFormData({ ...formData, selling_price: parseFloat(e.target.value) })}
+            value={formData.selling_price}
+            onChange={(e) => setFormData({ ...formData, selling_price: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
 
         <div>
-          <label htmlFor="image" className="block text-sm font-medium mb-1">
-            Image URL
+          <label htmlFor="images" className="block text-sm font-medium mb-1">
+            Update Images (Optional - leave empty to keep current images)
           </label>
           <input
-            id="image"
-            type="url"
-            value={formData.image}
-            onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+            id="images"
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={(e) => {
+              const files = Array.from(e.target.files || []);
+              if (files.length > 10) {
+                setError('Maximum 10 images allowed');
+                return;
+              }
+              // Validate each file
+              for (const file of files) {
+                if (file.size > 5 * 1024 * 1024) {
+                  setError(`${file.name} exceeds 5MB limit`);
+                  return;
+                }
+              }
+              setImageFiles(files);
+              setError(''); // Clear error if validation passes
+            }}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+          {imageFiles.length > 0 && (
+            <div className="mt-2 grid grid-cols-4 gap-2">
+              {imageFiles.map((file, index) => (
+                <div key={index} className="relative">
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt={`Preview ${index + 1}`}
+                    className="w-full h-20 object-cover rounded"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setImageFiles(imageFiles.filter((_, i) => i !== index))}
+                    className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center hover:bg-red-600"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="mt-1 text-xs text-gray-500">
+            Select new images to replace existing ones. Leave empty to keep current images.
+          </p>
         </div>
 
         <div>
@@ -166,7 +224,7 @@ export default function EditItemPage() {
             min="1"
             required
             value={formData.quantity}
-            onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) })}
+            onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>

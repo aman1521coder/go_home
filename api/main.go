@@ -7,6 +7,7 @@ import (
 	database "primeauction/api/Database"
 	repository "primeauction/api/Repository"
 	"primeauction/api/handler"
+	"primeauction/api/middleware"
 	"primeauction/api/routes"
 	"primeauction/api/service"
 )
@@ -30,9 +31,9 @@ func main() {
 	itemHandler := handler.NewItemHandler(itemService)
 	userHandler := handler.NewUserHandler(userService)
 
-	// Serve static files (uploaded images)
+	// Serve static files (uploaded images) with CORS
 	fs := http.FileServer(http.Dir("./uploads"))
-	http.Handle("/uploads/", http.StripPrefix("/uploads/", fs))
+	http.Handle("/uploads/", middleware.CORSHandler(http.StripPrefix("/uploads/", fs)))
 
 	// Setup and register routes
 	routesList := routes.SetupRoutes(itemHandler, userHandler)

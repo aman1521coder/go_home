@@ -1,0 +1,41 @@
+# Environment variables
+.env
+.env.local
+.env*.local
+api/.env
+api/config/.env
+
+# Uploads
+uploads/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+
+# Next.js
+frontend/.next/
+frontend/out/
+frontend/.env*.local
+frontend/node_modules/
+
+# Logs
+*.log
+
+
